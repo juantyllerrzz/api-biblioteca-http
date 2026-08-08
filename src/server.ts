@@ -45,6 +45,16 @@ function sendJson(
   response.end(JSON.stringify(payload));
 }
 
+function sendValidationError(
+  response: ServerResponse,
+  message: string
+): void {
+  sendJson(response, 400, {
+    error: "VALIDATION_ERROR",
+    message
+  });
+}
+
 async function readJsonBody(
   request: IncomingMessage
 ): Promise<unknown> {
@@ -88,7 +98,51 @@ const server = createServer(
         return;
       }
 
-      // TODO: implementar los endpoints de libros.
+      // GET /api/books  (con filtros opcionales ?author= y ?available=)
+      if (method === "GET" && pathname === "/api/books") {
+        const authorQuery = searchParams
+          .get("author")
+          ?.toLowerCase();
+
+        const availableParam = searchParams.get("available");
+        let availableFilter: boolean | null = null;
+
+        if (availableParam !== null) {
+          if (availableParam !== "true" && availableParam !== "false") {
+            sendValidationError(
+              response,
+              "El parámetro available debe ser true o false"
+            );
+
+            return;
+          }
+
+          availableFilter = availableParam === "true";
+        }
+
+        let results = books;
+
+        if (authorQuery) {
+          results = results.filter((book) =>
+            book.author.toLowerCase().includes(authorQuery)
+          );
+        }
+
+        if (availableFilter !== null) {
+          results = results.filter(
+            (book) => book.available === availableFilter
+          );
+        }
+
+        sendJson(response, 200, {
+          data: results,
+          total: results.length
+        });
+
+        return;
+      }
+
+      // TODO: implementar los endpoints de libros restantes.
       // Utilice method, pathname, searchParams y readJsonBody().
 
       sendJson(response, 404, {
